@@ -1,17 +1,23 @@
 package com.tangzhentao.libbase.base;
 
 import android.content.Context;
-import android.graphics.Color;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.FrameLayout;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.LinearLayout;
+
+import com.tangzhentao.libbase.R;
+import com.tangzhentao.libbase.utils.OsUtils;
+import com.tangzhentao.libbase.utils.ResUtils;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 
 /**
@@ -26,8 +32,6 @@ public abstract class BaseActivity extends AppCompatActivity {
     private LinearLayout mRootLayout;
     //标题栏布局
     private BaseTitle mTitleLayout;
-    //内容布局
-    private FrameLayout mContentLayout;
 
     protected Context mContext;
 
@@ -35,65 +39,83 @@ public abstract class BaseActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mContext = this;
-        //全屏+状态栏透明化
-        if (getStatusBarTransparent()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                getWindow().setStatusBarColor(Color.TRANSPARENT);
-            }
-        }
 
         mRootLayout = new LinearLayout(this);
         //避免控件会顶到状态栏上
         mRootLayout.setFitsSystemWindows(true);
         mRootLayout.setOrientation(LinearLayout.VERTICAL);
+        mRootLayout.setBackgroundColor(ResUtils.getColor(R.color.white));
 
         //设置头部布局（状态栏背景和标题栏）
         if (getTitleParams() != null) {
             TitleParams titleParams = getTitleParams();
 
-            //设置状态栏
-            if (getStatusBarTransparent()) {
+            if (getStatusBarColorSameAsTitleBarColor()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    getWindow().setStatusBarColor(titleParams.BgColor);
-                    setStatusBarTextColor(titleParams.statusBarTextColor);
+                    //设置状态栏颜色
+                    getWindow().setStatusBarColor(titleParams.bgColor);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        //设置状态栏文字图标 黑色还是白色
+                        getWindow().getDecorView().setSystemUiVisibility(ResUtils.isLightColor(titleParams.bgColor) ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : View.SYSTEM_UI_FLAG_VISIBLE);
+                    }
                 }
             }
 
             //设置标题栏
             if (mTitleLayout == null) {
                 mTitleLayout = new BaseTitle(this);
-                mTitleLayout.setBackgroundColor(titleParams.BgColor);
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, titleParams.Height);
+                mTitleLayout.setBackgroundColor(titleParams.bgColor);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, titleParams.titleHeight);
                 mRootLayout.addView(mTitleLayout, params);
 
                 updateTitleBar();
             }
         }
 
-        mContentLayout = new FrameLayout(this);
-        mRootLayout.addView(mContentLayout, new LinearLayout.LayoutParams(-1,-1));
-        super.setContentView(mRootLayout);
+        if (getLayoutId() > 0) {
+            View content =View.inflate(this, getLayoutId(), null);
+            if (content != null) {
+                mRootLayout.addView(content, new LinearLayout.LayoutParams(-1,-1));
+            }
+        }
+
+        setContentView(mRootLayout);
+
+        initView();
+        initData();
+        bindListener();
+
+        Log.i(this.getClass().getName(), "onCreate");
     }
 
     @Override
-    public final void setContentView(int layoutResID) {
-        setContentView(View.inflate(this, layoutResID, null));
-    }
-
-    @Override
-    public final void setContentView(View view) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -1);
-        setContentView(view, params);
-    }
-
-    @Override
-    public final void setContentView(View view, ViewGroup.LayoutParams params) {
-        mContentLayout.addView(view, params);
+    protected void onStart() {
+        super.onStart();
+        Log.i(this.getClass().getName(), "onStart");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        Log.i(this.getClass().getName(), "onResume");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.i(this.getClass().getName(), "onPause");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.i(this.getClass().getName(), "onStop");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.i(this.getClass().getName(), "onDestroy");
     }
 
     /**
@@ -105,7 +127,7 @@ public abstract class BaseActivity extends AppCompatActivity {
             return;
         }
 
-        mTitleLayout.setHeight(titleParams.Height);
+        mTitleLayout.setHeight(titleParams.titleHeight);
         mTitleLayout.removeAllViews();
         mTitleLayout.setCenterTitle(titleParams.title);
         mTitleLayout.addLeftBaseAction(titleParams.leftAction);
@@ -113,13 +135,35 @@ public abstract class BaseActivity extends AppCompatActivity {
     }
 
     /**
-     * 获取是否显示状态透明化
-     * @return boolean
+     * 获取布局资源id
+     * @return int 值的布局资源id
      */
-    protected abstract boolean getStatusBarTransparent();
+    protected abstract int getLayoutId();
+
+    /**
+     * 初始化view
+     */
+    protected abstract void initView();
+
+    /**
+     * 初始化数据
+     */
+    protected abstract void initData();
+
+    /**
+     * 设置点击
+     */
+    protected abstract void bindListener();
+
+    /**
+     * 设置是否让状态颜色和标题栏一致
+     * @return 默认一致，可以重写返回false展示不一致
+     */
+    protected boolean getStatusBarColorSameAsTitleBarColor() {return true;}
 
     /**
      * 是否展示标题栏
+     * 返回null不展示标题栏
      */
     protected abstract TitleParams getTitleParams();
 
@@ -140,24 +184,97 @@ public abstract class BaseActivity extends AppCompatActivity {
 //    }
 
     /**
-     * 设置状态栏文字颜色
-     * @param color
+     * 通用的左边返回按钮图片构建
+     * @return BaseAction
      */
-    private void setStatusBarTextColor(int color) {
-
+    protected BaseTitle.BaseAction createLeftBackImgAction() {
+        return BaseTitle.createLeftAction(this);
     }
 
     /**
-     * 获取状态高度
-     * @return int
+     * 通用的右边文字输入
+     * @return BaseAction
      */
-    private int getStatusBarHeight() {
-        int statusBarHeight = -1;
-        int resId = getResources().getIdentifier("status_bar_height", "dimen", "android");
-        if (resId > 0) {
-            statusBarHeight = getResources().getDimensionPixelSize(resId);
-        }
+    protected BaseTitle.BaseAction createRightTextAction(String rightText, Intent intent) {
+        return BaseTitle.createRightTextAction(this, rightText, intent);
+    }
 
-        return statusBarHeight;
+    /**
+     * 设置状态栏文字颜色
+     * @param color 0x...x
+     */
+    private void setStatusBarTextColor(int color) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            if (OsUtils.isFlyme()) {
+                setFlyme(color);
+            }else if (OsUtils.isMIUI()) {
+                setMIUI(color);
+            }else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Window window = getWindow();
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+                window.getDecorView().setSystemUiVisibility(ResUtils.isLightColor(color) ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : View.SYSTEM_UI_FLAG_VISIBLE);
+            }
+        }
+    }
+
+
+    private void setFlyme(int color) {
+        Window window = getWindow();
+        if (window != null) {
+            try {
+                WindowManager.LayoutParams lp = window.getAttributes();
+                Field darkFlag = WindowManager.LayoutParams.class
+                        .getDeclaredField("MEIZU_FLAG_DARK_STATUS_BAR_ICON");
+                Field meizuFlags = WindowManager.LayoutParams.class
+                        .getDeclaredField("meizuFlags");
+                darkFlag.setAccessible(true);
+                meizuFlags.setAccessible(true);
+                int bit = darkFlag.getInt(null);
+                int value = meizuFlags.getInt(lp);
+                if (ResUtils.isLightColor(color)) {
+                    value |= bit;
+                } else {
+                    value &= ~bit;
+                }
+                meizuFlags.setInt(lp, value);
+                window.setAttributes(lp);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void setMIUI(int color) {
+        Window window = getWindow();
+        if (window != null) {
+            Class clazz = window.getClass();
+            try {
+                int darkModeFlag = 0;
+                Class layoutParams = Class.forName("android.view.MiuiWindowManager$LayoutParams");
+                Field field = layoutParams.getField("EXTRA_FLAG_STATUS_BAR_DARK_MODE");
+                darkModeFlag = field.getInt(layoutParams);
+                Method extraFlagField = clazz.getMethod("setExtraFlags", int.class, int.class);
+                if (ResUtils.isLightColor(color)) {
+                    extraFlagField.invoke(window, darkModeFlag, darkModeFlag);//状态栏透明且黑色字体
+                } else {
+                    extraFlagField.invoke(window, 0, darkModeFlag);//清除黑色字体
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    //开发版 7.7.13 及以后版本采用了系统API，旧方法无效但不会报错，所以两个方式都要加上
+                    if (ResUtils.isLightColor(color)) {
+                        getWindow().getDecorView().setSystemUiVisibility(View
+                                .SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View
+                                .SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+                    } else {
+                        getWindow().getDecorView().setSystemUiVisibility(View
+                                .SYSTEM_UI_FLAG_VISIBLE);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

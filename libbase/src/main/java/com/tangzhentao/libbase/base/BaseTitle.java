@@ -1,14 +1,14 @@
 package com.tangzhentao.libbase.base;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.text.TextUtils;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -16,6 +16,7 @@ import android.widget.TextView;
 
 import com.tangzhentao.libbase.R;
 import com.tangzhentao.libbase.utils.DimenSizeUtils;
+import com.tangzhentao.libbase.utils.ResUtils;
 
 import java.util.List;
 
@@ -158,6 +159,11 @@ public class BaseTitle extends RelativeLayout implements View.OnClickListener{
                 actionView = ivLeft;
             }
 
+            if (actions.indexOf(action) > 0) {
+                LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) actionView.getLayoutParams();
+                params.leftMargin = DimenSizeUtils.dpTopx(10);
+            }
+
             actionView.setTag(action);
             actionView.setOnClickListener(this);
             mRightLayout.addView(actionView);
@@ -169,5 +175,55 @@ public class BaseTitle extends RelativeLayout implements View.OnClickListener{
         public int getDrawable() { return 0; }
         public View getView() { return null; }
         public abstract void doClick(View v);
+    }
+
+
+    /**
+     * 创建通用的左边返回按钮
+     * @return BaseAction
+     */
+    public static BaseAction createLeftAction(final Activity activity) {
+        return new BaseAction() {
+            @Override
+            public int getDrawable() {
+                return R.drawable.left_back;
+            }
+
+            @Override
+            public void doClick(View v) {
+                if (activity != null) {
+                    activity.finish();
+                }
+            }
+        };
+    }
+
+    /**
+     * 创建通用的右边文字
+     * @param activity 当前activity
+     * @param text 文字
+     * @param intent 跳转逻辑
+     * @return BaseAction
+     */
+    public static BaseAction createRightTextAction(final Activity activity, final String text, final Intent intent) {
+        return new BaseAction() {
+            @Override
+            public View getView() {
+                TextView view = new TextView(activity);
+                view.setGravity(Gravity.CENTER_VERTICAL);
+                view.setText(text);
+                view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                view.setTextColor(ResUtils.getColor(R.color.white));
+
+                return view;
+            }
+
+            @Override
+            public void doClick(View v) {
+                if (activity != null && intent !=null) {
+                    activity.startActivity(intent);
+                }
+            }
+        };
     }
 }

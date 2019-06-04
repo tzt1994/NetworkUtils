@@ -1,15 +1,14 @@
 package com.tangzhentao.networkutils;
 
-import android.graphics.Color;
+import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.os.Bundle;
-import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.tangzhentao.libbase.base.BaseActivity;
-import com.tangzhentao.libbase.base.BaseTitle;
 import com.tangzhentao.libbase.base.TitleParams;
 import com.tangzhentao.libbase.utils.DimenSizeUtils;
 import com.tangzhentao.libbase.utils.ToastUtils;
@@ -26,50 +25,31 @@ public class MainActivity extends BaseActivity {
     private RiliRepository repository = BsRepository.get(RiliRepository.class);
 
     @Override
-    protected boolean getStatusBarTransparent() {
-        return true;
-    }
-
-    @Override
     protected TitleParams getTitleParams() {
-        TitleParams titleParams = new TitleParams(new BaseTitle.BaseAction() {
-            @Override
-            public int getDrawable() {
-                return R.drawable.left_back;
-            }
-
-            @Override
-            public void doClick(View v) {
-                ToastUtils.ShowShort(mContext, "点击了左边图片");
-            }
-        }, "标题栏", new BaseTitle.BaseAction() {
-            @Override
-            public int getDrawable() {
-                return R.drawable.left_back;
-            }
-
-            @Override
-            public void doClick(View v) {
-                ToastUtils.ShowShort(mContext, "点击了右边图片");
-            }
-        });
-        titleParams.BgColor = Color.parseColor("#1874cd");
-        titleParams.Height = DimenSizeUtils.dpTopx(90);
+        TitleParams titleParams = new TitleParams(createLeftBackImgAction(), "标题栏", createRightTextAction("设置", new Intent(mContext, SettingActivity.class)));
+//        titleParams.titleHeight = DimenSizeUtils.dpTopx(50);
         return titleParams;
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         repository.register();
+    }
 
-        setContentView(R.layout.activity_main);
+    @Override
+    protected int getLayoutId() {
+        return R.layout.activity_main;
+    }
 
+    @Override
+    protected void initView() {
         textView = findViewById(R.id.tv_test);
-
         etInput = findViewById(R.id.et_input_river);
+    }
 
+    @Override
+    protected void initData() {
         final NetworkLiveData<BsResponse<List<TestResponse>>> obser =  repository.getBsViewModel().getOberverRiver();
         obser.observe(this, new NetworkObserve<List<TestResponse>>() {
             @Override
@@ -98,8 +78,14 @@ public class MainActivity extends BaseActivity {
                 obser.setValue(null);
             }
         });
+    }
 
-        findViewById(R.id.btn_start).setOnClickListener(v -> repository.getCitys());
+    @Override
+    protected void bindListener() {
+        findViewById(R.id.btn_start).setOnClickListener(v -> {
+            ToastUtils.ShowShort(mContext, "点击了");
+            repository.getCitys();
+        });
     }
 
     @Override

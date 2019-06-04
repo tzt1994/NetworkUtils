@@ -45,4 +45,18 @@ public class DimenSizeUtils {
     public static int dpTopx(int dp) {
         return (int) (AppUtils.getResources().getDisplayMetrics().density * dp + 0.5f);
     }
+
+    /**
+     * 获取状态高度
+     * @return int
+     */
+    public static int getStatusBarHeight() {
+        int statusBarHeight = -1;
+        int resId = AppUtils.getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resId > 0) {
+            statusBarHeight = AppUtils.getResources().getDimensionPixelSize(resId);
+        }
+
+        return statusBarHeight;
+    }
 }
